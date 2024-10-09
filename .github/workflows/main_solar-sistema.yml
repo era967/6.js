@@ -1,0 +1,63 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy JAR app to Azure Web App - solar-sistema
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java version
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'microsoft'
+
+      - name: Build with Maven
+        run: mvn clean install
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-app
+          path: '${{ github.workspace }}/target/*.jar'
+
+  deploy:
+    runs-on: windows-latest
+    needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    permissions:
+      id-token: write #This is required for requesting the JWT
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: java-app
+      
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_95F65929F5624949A39B652163A05A7C }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_6686249F4A154E7DB2307251471E6F45 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_DFAE5C3057A64D0E8A0F749B5B228222 }}
+
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'solar-sistema'
+          slot-name: 'Production'
+          package: '*.jar'
+          
